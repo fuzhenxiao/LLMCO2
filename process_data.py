@@ -48,13 +48,20 @@ def makeEntry(row):
 
 
 if __name__ == "__main__":
-
-    with open("./data/data.csv", "r", newline="\n") as file:
+    cnt = [0, 0, 0]
+    counter = [3334, 3333, 3333]
+    with open("./data0/data.csv", "r", newline="\n") as file:
         reader = csv.reader(file)
         first_entry = None
         first_label = None
         for row in reader:
             second_entry, second_label = makeEntry(row)
+            index = int(second_entry[0][0])
+            if cnt[index] >= counter[index]:
+                continue
+            else:
+                cnt[index] += 1
+
             if first_entry is None:
                 first_entry = second_entry
             else:
@@ -65,13 +72,13 @@ if __name__ == "__main__":
             else:
                 first_label = np.concatenate((first_label, second_label), axis=0)
 
-        if first_entry is not None:
-            print(first_entry.shape)
-            print(first_entry.dtype)
+        # if first_entry is not None:
+        #     print(first_entry.shape)
+        #     print(first_entry.dtype)
 
-        if first_label is not None:
-            print(first_label.shape)
-            print(first_label.dtype)
+        # if first_label is not None:
+        #     print(first_label.shape)
+        #     print(first_label.dtype)
 
         file.close()
 
@@ -88,10 +95,33 @@ if __name__ == "__main__":
             )
 
             print(X_train.shape)
+            print(X_train.shape)
             print(X_test.shape)
             print(X_val.shape)
             print(y_train.shape)
             print(y_test.shape)
             print(y_val.shape)
 
-            joblib.dump([X_train, X_val, X_test, y_train, y_val, y_test], "data_all.joblib")
+            cnt = [0, 0, 0]
+            test_entry_buck = [[], [], []]
+            test_label_buck = [[], [], []]
+            for i in range(X_test.shape[0]):
+                index = int(X_test[i][0])
+                cnt[index] += 1
+                test_entry_buck[index].append(X_test[i])
+                test_label_buck[index].append(y_test[i])
+            print(cnt)
+
+            test_data = []
+            test_label = []
+            for i in range(3):
+                test_data.append(np.stack(test_entry_buck[i], axis=0))
+                test_label.append(np.stack(test_label_buck[i], axis=0))
+            
+            for i in range(3):
+                print(test_data[i].shape)
+                print(test_label[i].shape)
+
+            joblib.dump(
+                [X_train, X_val, test_data, y_train, y_val, test_label], "fake_data_all.joblib"
+            )

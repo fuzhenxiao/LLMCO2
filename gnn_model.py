@@ -134,6 +134,15 @@ class DoubleGraphNet(torch.nn.Module):
         self.fc_relu1 = nn.ReLU()
         self.fc_relu2 = nn.ReLU()
         self.predictor = nn.Linear(fc_hidden, 1)
+
+        self.fc_12 = nn.Linear(gnn_hidden + gnn_hidden + 1, fc_hidden)
+        self.fc_22 = nn.Linear(fc_hidden, fc_hidden)
+        self.fc_drop_12 = nn.Dropout(p=0.05)
+        self.fc_drop_22 = nn.Dropout(p=0.05)
+        self.fc_relu12 = nn.ReLU()
+        self.fc_relu22 = nn.ReLU()
+        self.predictor2 = nn.Linear(fc_hidden, 1)
+
         self._initialize_weights()
 
     def _initialize_weights(self):
@@ -144,43 +153,21 @@ class DoubleGraphNet(torch.nn.Module):
             elif isinstance(m, self.gnn_layer_func):
                 pass
 
-    def forward(self, graph, data, prefill):
+    def forward(self, graph, data):
         x, A = graph.x, graph.edge_index
 
-        # print(x.shape)
-        # print(A.shape)
-
         x = self.graph_conv_1(x, A)
-
-        # print(x.shape)
-
         x = self.gnn_relu1(x)
-
-        # print(x.shape)
         x = self.gnn_drop_1(x)
-        # print(x.shape)
-
         x = self.graph_conv_2(x, A)
-        # print(x.shape)
-
         x = self.gnn_relu2(x)
-        # print(x.shape)
-
         x = self.gnn_drop_2(x)
-        # print(x.shape)
 
         gnn_feat = scatter(x, graph.batch, dim=0, reduce=self.reduce_func)
-        # print(gnn_feat.shape)
-
-        # print(data.shape)
         static_feature = self.norm_sf_linear(data)
-        # print(static_feature.shape)
         static_feature = self.norm_sf_drop(static_feature)
-        # print(static_feature.shape)
         static_feature = self.norm_sf_relu(static_feature)
-        # print(static_feature.shape)
         x = torch.cat([gnn_feat, static_feature], dim=1)
-        # print(x.shape)
 
         x = self.fc_1(x)
         x = self.fc_relu1(x)
@@ -188,6 +175,15 @@ class DoubleGraphNet(torch.nn.Module):
         x = self.fc_2(x)
         x = self.fc_relu2(x)
         feat = self.fc_drop_2(x)
-        x = self.predictor(feat)
+        prefill = self.predictor(feat)
 
-        return x
+        x = torch.cat([gnn_feat, static_feature, prefill], dim=1)
+        x = self.fc_12(x)
+        x = self.fc_relu12(x)
+        x = self.fc_drop_12(x)
+        x = self.fc_22(x)
+        x = self.fc_relu22(x)
+        feat = self.fc_drop_22(x)
+        decode = self.predictor2(feat)
+
+        return prefill + decode

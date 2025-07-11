@@ -1,5 +1,44 @@
 import torch
 import numpy as np
+import joblib
+
+
+def make_dataset():
+    real_data = joblib.load("real_data_all.joblib")
+    fake_data = joblib.load("fake_data_all.joblib")
+    # [X_train, X_val, X_test, y_train, y_val, y_test]
+    joblib.dump(
+        [fake_data[0], fake_data[1], fake_data[3], fake_data[4]], "uniform_train.joblib"
+    )
+    # joblib.dump([real_data[2], real_data[5]], "test_data.joblib")
+    llm = [[], [], []]
+    label= [[], [], []]
+
+    print(real_data[2].shape)
+
+    for i in range(real_data[2].shape[0]):
+        index = int(real_data[2][i][0])
+        llm[index].append(real_data[2][i])
+        label[index].append(real_data[5][i])
+
+    lama7b = np.stack(llm[0], axis=0)
+    lama7b_la = np.stack(label[0], axis=0)
+
+    print(lama7b.shape)
+
+    intm = np.stack(llm[1], axis=0)
+    intm_la = np.stack(label[1], axis=0)
+    
+    print(intm.shape)
+
+    lama70b = np.stack(llm[2], axis=0)
+    lama70b_la = np.stack(label[2], axis=0)
+    
+    print(lama70b.shape)
+
+    joblib.dump([lama7b, lama7b_la], "llama7b_test.joblib")
+    joblib.dump([intm, intm_la], "intllm_test.joblib")
+    joblib.dump([lama70b, lama70b_la], "llama70b_test.joblib")
 
 class Metric(object):
     def __init__(self):
@@ -126,3 +165,7 @@ avaliable_model_ids_sources = {
     "internlm/internlm-20b": {"file": "Inter.py"},
 }
 avaliable_model_ids = [_ for _ in avaliable_model_ids_sources.keys()]
+
+
+if __name__ == "__main__":
+    make_dataset()
